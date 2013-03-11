@@ -48,6 +48,7 @@ int main(int argc,char *argv[])
 	for(i=0;argv[1][i]!=0;i++)
 		seed=seed*10+(int )(argv[1][i]-48);
 	printf("Seed : %d\n",seed);
+	printf("Key in binary : \n");
 	int key_plus[56];
 	for(i=0;i<56;i++)
 		key_plus[i]=56;
@@ -67,7 +68,7 @@ int main(int argc,char *argv[])
 			i++;
 		}
 	}
-	printf("Key Plus \n");
+	printf("\n\nKey Plus \n");
 	for(i=0;i<56;i++)
 		printf("%d ",key_plus[i]);
 	printf("\n");
