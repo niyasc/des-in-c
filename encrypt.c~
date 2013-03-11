@@ -143,7 +143,7 @@ int main(int argc,char *argv[])
 	printf("\n48 bit keys are\n");
 	for(i=0;i<16;i++)
 	{
-		printf("Round %d \n",i);
+		printf("\nRound %d \n",i);
 		for(j=0;j<48;j++)
 		{
 			if(j&&!(j%8))
@@ -151,7 +151,61 @@ int main(int argc,char *argv[])
 			printf("%d",k[i][j]);
 		}
 	}
+	//read message from file
+	char message[1024];
+	bool message_conv[1024*8];
+	FILE *ptr=fopen(argv[1],"r");
+	if(ptr==NULL)
+	{
+		printf("Could not open file %s\n",argv[1]);
+		return 1;
+	}
+	i=0;
+	while(!feof(ptr))
+		fscanf(ptr,"%c",&message[i++]);
+	message[i]=0;
+	printf("Message text : \n%s[eom]\n",message);
+	//perform padding
+	if(strlen(message)%8!=0)
+	{
+		printf("Perform padding\n");
+		for(i=strlen(message);i%8!=0;i++)
+		{
+			message[i]='0';
+		}
+		message[i]=0;
+		printf("Message after padding : \n%s\n",message);
+	}
+	for(i=0;i<strlen(message)/8;i++)
+	{
+		bool m[64];
+		for(j=0;j<64;j++)
+			m[j]=0;
+		for(j=i*8;j<(i+1)*8;j++)
+		{
+			int t=message[j];
+			int k=(j-i*8)*8+7;
+			while(t)
+			{
+				m[k]=t%2;
+				t=t/2;
+				k--;
+			}
+		}
+		//debugging print
+		printf("\n");
+		for(j=i*8;j<(i+1)*8;j++)
+			printf("%c",message[j]);
+		printf(" ");
+		for(j=0;j<64;j++)
+		{
+			if(j&&!(j%8))
+				printf(" ");
+			printf("%d",m[j]);
+		}
+	}
 		
+
 		
 	printf("\n");
 	return 0;

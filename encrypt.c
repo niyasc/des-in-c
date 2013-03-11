@@ -67,7 +67,13 @@ void cls(bool key[],int c)
 	for(i=56-c;i<56;i++)
 		key[i]=buffer[i+c-56];
 }
-	
+bool xor(bool a,bool b)
+{
+	if(a==b)
+		return false;
+	else
+		return true;
+}	
 	
 		
 int main(int argc,char *argv[])
@@ -151,7 +157,76 @@ int main(int argc,char *argv[])
 			printf("%d",k[i][j]);
 		}
 	}
+	//read message from file
+	char message[1024];
+	bool message_conv[1024*8];
+	FILE *ptr=fopen(argv[1],"r");
+	if(ptr==NULL)
+	{
+		printf("Could not open file %s\n",argv[1]);
+		return 1;
+	}
+	i=0;
+	while(!feof(ptr))
+		fscanf(ptr,"%c",&message[i++]);
+	message[i]=0;
+	printf("Message text : \n%s[eom]\n",message);
+	//perform padding
+	if(strlen(message)%8!=0)
+	{
+		printf("Perform padding\n");
+		for(i=strlen(message);i%8!=0;i++)
+		{
+			message[i]='0';
+		}
+		message[i]=0;
+		printf("Message after padding : \n%s\n",message);
+	}
+	for(i=0;i<strlen(message)/8;i++)
+	{
+		bool m[64];
+		for(j=0;j<64;j++)
+			m[j]=0;
+		for(j=i*8;j<(i+1)*8;j++)
+		{
+			int t=message[j];
+			int k=(j-i*8)*8+7;
+			while(t)
+			{
+				m[k]=t%2;
+				t=t/2;
+				k--;
+			}
+		}
+		//debugging print
+		printf("\n");
+		for(j=i*8;j<(i+1)*8;j++)
+			printf("%c",message[j]);
+		printf(" ");
+		for(j=0;j<64;j++)
+		{
+			if(j&&!(j%8))
+				printf(" ");
+			printf("%d",m[j]);
+		}
+		//perform conversion
+		for(j=0;j<16;j++)
+		{
+			printf("Round 1\nMessage\n");
+			bool mr[48];
+			int l=0;
+			for(l=0;l<48;l++)
+			{
+				mr[l]=m[e[l]];
+			}
+			for(l=0;l<48;l++)
+				mr[l]=xor(mr[l],k[j][l]);
+			bool t[32];
+			for(l=0;l<32;l++)
+				t[l]=
+	}
 		
+
 		
 	printf("\n");
 	return 0;
