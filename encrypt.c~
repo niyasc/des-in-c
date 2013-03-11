@@ -143,7 +143,7 @@ int main(int argc,char *argv[])
 	printf("\n48 bit keys are\n");
 	for(i=0;i<16;i++)
 	{
-		printf("\nRound %d \n",i);
+		printf("Round %d \n",i);
 		for(j=0;j<48;j++)
 		{
 			if(j&&!(j%8))
