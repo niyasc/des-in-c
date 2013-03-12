@@ -199,8 +199,6 @@ int main(int argc,char *argv[])
 	fclose(ptr);
 	printf("\nMessage text : \n%s[eom]\n",message);
 	//perform padding
-	printf("Enter message \n");
-	scanf("%s",message);
 	if(strlen(message)%8!=0)
 	{
 		printf("Perform padding\n");
@@ -212,25 +210,12 @@ int main(int argc,char *argv[])
 		printf("Message after padding : \n%s\n",message);
 	}
 	ptr=fopen(argv[3],"w");
-	for(i=0;i<strlen(message)/8;i++)
+	for(i=0;i<strlen(message)/64;i++)
 	{
 		bool m[64];
 		for(j=0;j<64;j++)
-			m[j]=0;
-		printf("Message block : ");
-		for(j=i*8;j<(i+1)*8;j++)
-		{
-			int t=message[j];
-			printf("%c",t);
-			int k=(j-i*8)*8+7;
-			while(t)
-			{
-				m[k]=t%2;
-				t=t/2;
-				k--;
-			}
-		}
-		printf("\n");
+			m[j]=message[j];
+		
 		//debugging print
 		//perform initial permutation
 		bool dupe[64];
@@ -259,7 +244,7 @@ int main(int argc,char *argv[])
 				mr[l]=m[e[l]];
 			}
 			for(l=0;l<48;l++)
-				mr[l]=xor(mr[l],k[j][l]);
+				mr[l]=xor(mr[l],k[15-j][l]);
 			bool t[32];
 			for(l=0;l<8;l++)
 			{
@@ -318,8 +303,17 @@ int main(int argc,char *argv[])
 			dupe[l]=m[l];
 		for(l=0;l<64;l++)
 			m[ip[l]]=dupe[l];
-		for(j=0;j<64;j++)
-			fprintf(ptr,"%d",m[j]);			
+		int o[8];
+		for(j=0;j<8;j++)
+			o[8]=0;
+		for(j=0;j<8;j++)
+		{
+			for(l=j*8;l<(j+1)*8;l++)
+			{
+				o[j]=o[j]*2+m[l];
+			}
+			fprintf(ptr,"%c",o[j]);
+		}			
 	}	
 	fclose(ptr);
 	printf("\n");

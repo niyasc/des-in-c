@@ -149,7 +149,6 @@ int main(int argc,char *argv[])
 		printf("Length of key %s is more than 8 bytes..\nTruncating extra symbols\n",argv[2]);
 		key[8]=0;
 	}
-	printf("input key : %s\n",key);
 	//generate key in binary
 	for(i=0;i<8;i++)
 	{
@@ -164,13 +163,6 @@ int main(int argc,char *argv[])
 			t=t/2;
 		}
 	}
-	printf("Key in binary(64) : \n");
-	for(i=0;i<64;i++)
-	{
-		if(i&&i%8==0)
-			printf(" ");
-		printf("%d",key_bin[i]);
-	}
 	for(i=0;i<56;i++)
 	{
 		key_permuted[i]=key_bin[pc1[i]];
@@ -179,8 +171,18 @@ int main(int argc,char *argv[])
 	{
 		cls(key_permuted,cls_value[i]);
 		for(j=0;j<48;j++)
+		{
 			k[i][j]=key_permuted[pc2[j]];
+		}
 	}
+	//print key
+	for(i=0;i<16;i++)
+	{
+		printf("\nKey %d : ",i);
+		for(j=0;j<48;j++)
+			printf("%d",k[i][j]);
+	}
+	printf("\n");
 	//read message from file
 	char message[1024];
 	bool message_conv[1024*8];
@@ -228,16 +230,19 @@ int main(int argc,char *argv[])
 		}
 		printf("\n");
 		//debugging print
+		//perform initial permutation
+		bool dupe[64];
+		for(j=0;j<64;j++)
+			dupe[j]=m[ip[j]];
+		for(j=0;j<64;j++)
+			m[j]=dupe[j];
 		//perform conversion
 		for(j=0;j<16;j++)
 		{
 			printf("Round %d\n",j+1);
 			int l=0;
-			printf("Key              :");
-			for(l=0;l<48;l++)
-				printf("%d",k[j][l]);
 			printf("\n");
-			printf("Message in binary:");
+			printf("IP : ");
 			for(l=0;l<64;l++)
 			{
 				if(l&&!(l%32))
@@ -287,7 +292,30 @@ int main(int argc,char *argv[])
 			}
 			for(l=0;l<32;l++)
 				m[l+32]=t[l];
+			//print message
+			printf("OP : ");
+			for(l=0;l<64;l++)
+			{
+				if(l&&!(l%32))
+					printf(" ");
+				printf("%d",m[l]);
+			}
+			printf("\n");
 		}
+		int l;
+		bool r[32];
+		for(l=0;l<32;l++)
+		{
+			r[l]=m[l];
+			m[l]=m[l+32];
+		}
+		for(l=32;l<64;l++)
+			m[l]=r[l-32];
+		//perform reverse permutation
+		for(l=0;l<64;l++)
+			dupe[l]=m[l];
+		for(l=0;l<64;l++)
+			m[ip[l]]=dupe[l];
 		for(j=0;j<64;j++)
 			fprintf(ptr,"%d",m[j]);			
 	}	
