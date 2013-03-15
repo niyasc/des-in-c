@@ -23,7 +23,7 @@ const short int cls_value[16]={1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1};
 const short int ip[64]=	{
 			57,49,41,33,25,17,9,1,
 			59,51,43,35,27,19,11,3,
-			61,53,45,37,29,21,12,5,
+			61,53,45,37,29,21,13,5,
 			63,55,47,39,31,23,15,7,
 			56,48,40,32,24,16,8,0,
 			58,50,42,34,26,18,10,2,
@@ -143,7 +143,7 @@ int main(int argc,char *argv[])
 	bool key_bin[64];
 	bool key_permuted[56];
 	bool k[16][48];
-	int i,j;
+	int i,j,l;
 	if(strlen(argv[2])>8)
 	{
 		printf("Length of key %s is more than 8 bytes..\nTruncating extra symbols\n",argv[2]);
@@ -175,17 +175,9 @@ int main(int argc,char *argv[])
 			k[i][j]=key_permuted[pc2[j]];
 		}
 	}
-	//print key
-	for(i=0;i<16;i++)
-	{
-		printf("\nKey %d : ",i);
-		for(j=0;j<48;j++)
-			printf("%d",k[i][j]);
-	}
-	printf("\n");
 	//read message from file
 	char message[1024];
-	bool message_conv[1024*8];
+	bool message_bin[8192];
 	FILE *ptr=fopen(argv[1],"r");
 	if(ptr==NULL)
 	{
@@ -193,128 +185,100 @@ int main(int argc,char *argv[])
 		return 1;
 	}
 	i=0;
+	char c;
 	while(!feof(ptr))
-		fscanf(ptr,"%c",&message[i++]);
-	message[i-1]=0;
-	fclose(ptr);
-	printf("\nMessage text : \n%s[eom]\n",message);
-	//perform padding
-	if(strlen(message)%8!=0)
 	{
-		printf("Perform padding\n");
-		for(i=strlen(message);i%8!=0;i++)
-		{
-			message[i]='0';
-		}
-		message[i]=0;
-		printf("Message after padding : \n%s\n",message);
+		fscanf(ptr,"%c",&c);
+		message_bin[i++]=(bool)(c-48);
 	}
+	int len=i-1;
+	fclose(ptr);
+	
 	ptr=fopen(argv[3],"w");
-	for(i=0;i<strlen(message)/64;i++)
+	for(i=0;i<len/64;i++)
 	{
-		bool m[64];
-		for(j=0;j<64;j++)
-			m[j]=message[j];
-		
-		//debugging print
+		bool block[64];
+		for(j=i*64;j<(i+1)*64;j++)
+		{
+			block[j-i*64]=message_bin[j];
+		}
 		//perform initial permutation
-		bool dupe[64];
+		bool t_bin[64];
 		for(j=0;j<64;j++)
-			dupe[j]=m[ip[j]];
-		for(j=0;j<64;j++)
-			m[j]=dupe[j];
-		//perform conversion
+			t_bin[j]=block[ip[j]];
 		for(j=0;j<16;j++)
 		{
-			printf("Round %d\n",j+1);
-			int l=0;
-			printf("\n");
-			printf("IP : ");
-			for(l=0;l<64;l++)
-			{
-				if(l&&!(l%32))
-					printf(" ");
-				printf("%d",m[l]);
-			}
-			printf("\n");
-			bool mr[48];
-			
+
+			bool mr[32];
+			//seperate right part
+			for(l=32;l<64;l++)
+				mr[l-32]=t_bin[l];
+			//expand right part
+			bool mre[48];
 			for(l=0;l<48;l++)
-			{
-				mr[l]=m[e[l]];
-			}
+				mre[l]=mr[e[l]];
+
+			//perform xor operation
 			for(l=0;l<48;l++)
-				mr[l]=xor(mr[l],k[15-j][l]);
-			bool t[32];
+				mre[l]=xor(mre[l],k[15-j][l]);
+			bool f[32];
 			for(l=0;l<8;l++)
 			{
-				bool r[6];//input of sbox;
 				int a;
+				bool sip[6];
 				for(a=l*6;a<(l+1)*6;a++)
-					r[a-l*6]=mr[a];
-				bool o[4];//output of sbox;
-				int x=r[0]*2+r[5];
+					sip[a-l*6]=mre[a];
+				int x=sip[0]*2+sip[5];
 				int y=0;
-				int b;
-				for(b=1;b<5;b++)
-					y=y*2+r[b];
+				for(a=1;a<5;a++)
+					y=y*2+sip[a];
 				int z=s[l][x][y];
-				for(b=0;b<4;b++)
-					o[b]=0;
-				b=3;
+				for(a=l*4;a<(l+1)*4;a++)
+					f[a]=0;
+				a=(l+1)*4-1;
 				while(z)
 				{
-					o[b]=z%2;
+					f[a]=z%2;
 					z=z/2;
-					b--;
-				}
-				for(b=l*4;b<(l+1)*4;b++)
-				{
-					t[b]=o[b-l*4];
+					a--;
 				}
 			}
+			bool f_permuted[32];
 			for(l=0;l<32;l++)
-			{
-				m[l]=m[l+32];
-			}
+				f_permuted[l]=f[p[l]];
 			for(l=0;l<32;l++)
-				m[l+32]=t[l];
-			//print message
-			printf("OP : ");
-			for(l=0;l<64;l++)
-			{
-				if(l&&!(l%32))
-					printf(" ");
-				printf("%d",m[l]);
-			}
-			printf("\n");
+				t_bin[l+32]=xor(t_bin[l],f_permuted[l]);
+			for(l=0;l<32;l++)
+				t_bin[l]=mr[l];
+			
 		}
-		int l;
-		bool r[32];
-		for(l=0;l<32;l++)
+		//exchange left and right
+		bool temp;
+		for(j=0;j<32;j++)
 		{
-			r[l]=m[l];
-			m[l]=m[l+32];
+			temp=t_bin[j];
+			t_bin[j]=t_bin[j+32];
+			t_bin[j+32]=temp;
 		}
-		for(l=32;l<64;l++)
-			m[l]=r[l-32];
-		//perform reverse permutation
-		for(l=0;l<64;l++)
-			dupe[l]=m[l];
-		for(l=0;l<64;l++)
-			m[ip[l]]=dupe[l];
-		int o[8];
-		for(j=0;j<8;j++)
-			o[8]=0;
+		//perform reverse ip
+		for(j=0;j<64;j++)
+			block[ip[j]]=t_bin[j];
+		char word[9];
 		for(j=0;j<8;j++)
 		{
+			word[j]=0;
 			for(l=j*8;l<(j+1)*8;l++)
-			{
-				o[j]=o[j]*2+m[l];
-			}
-			fprintf(ptr,"%c",o[j];
-		}			
+				word[j]=word[j]*2+block[l];
+		}
+		word[8]=0;
+		printf("\n-%s-\n",word);
+		for(j=0;j<8;j++)
+			fprintf(ptr,"%c",word[j]);
+		
 	}	
+			
+		
+		
 	fclose(ptr);
 	printf("\n");
 	return 0;

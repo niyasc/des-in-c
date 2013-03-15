@@ -140,7 +140,7 @@ int main(int argc,char *argv[])
 		return 1;
 	}
 	char *key=argv[2];
-	bool key_bin[64]={0,0,0,1,0,0,1,1, 0,0,1,1,0,1,0,0, 0,1,0,1,0,1,1,1, 0,1,1,1,1,0,0,1, 1,0,0,1,1,0,1,1, 1,0,1,1,1,1,0,0, 1,1,0,1,1,1,1,1, 1,1,1,1,0,0,0,1};
+	bool key_bin[64];
 	bool key_permuted[56];
 	bool k[16][48];
 	int i,j,l;
@@ -150,7 +150,7 @@ int main(int argc,char *argv[])
 		key[8]=0;
 	}
 	//generate key in binary
-	/*for(i=0;i<8;i++)
+	for(i=0;i<8;i++)
 	{
 		for(j=i*8;j<(i+1)*8;j++)
 			key_bin[j]=0;
@@ -162,15 +162,10 @@ int main(int argc,char *argv[])
 			k--;
 			t=t/2;
 		}
-	}*/
+	}
 	for(i=0;i<56;i++)
 	{
 		key_permuted[i]=key_bin[pc1[i]];
-	}
-	printf("\nPermuted key\n");
-	for(i=0;i<56;i++)
-	{
-		printf("%d",key_permuted[i]);
 	}
 	for(i=0;i<16;i++)
 	{
@@ -182,7 +177,7 @@ int main(int argc,char *argv[])
 	}
 	//read message from file
 	char message[1024];
-	bool message_bin[64]={0,0,0,0, 0,0,0,1, 0,0,1,0, 0,0,1,1, 0,1,0,0, 0,1,0,1, 0,1,1,0, 0,1,1,1, 1,0,0,0, 1,0,0,1, 1,0,1,0, 1,0,1,1, 1,1,0,0, 1,1,0,1, 1,1,1,0, 1,1,1,1};
+	bool message_bin[8192];
 	FILE *ptr=fopen(argv[1],"r");
 	if(ptr==NULL)
 	{
@@ -195,157 +190,180 @@ int main(int argc,char *argv[])
 	message[i-1]=0;
 	fclose(ptr);
 	printf("\nMessage text : \n%s[eom]\n",message);
+	//convert message to binary
+	for(i=0;i<strlen(message);i++)
+	{
+		for(j=i*8;j<(i+1)*8;j++)
+			message_bin[j]=0;
+		l=(i+1)*8-1;
+		int t=message[i];
+		while(t)
+		{
+			message_bin[l]=t%2;
+			t=t/2;
+			l--;
+		}
+	}
+	int len=strlen(message)*8;
 	//perform padding
-	if(strlen(message)%8!=0)
+	if((len%64)!=0)
 	{
-		printf("Perform padding\n");
-		for(i=strlen(message);i%8!=0;i++)
+		while((len%64)!=0)
 		{
-			message[i]='0';
+			message_bin[len]=0;
+			len++;
 		}
-		message[i]=0;
-		printf("Message after padding : \n%s\n",message);
-	}
-	//ptr=fopen(argv[3],"w");
-	//perform initial permutation
-	printf("Message in binary\n");
-	for(j=0;j<64;j++)
-		printf("%d",message_bin[j]);
-	printf("\n");
-	bool t_bin[64];
-	for(j=0;j<64;j++)
-		t_bin[j]=message_bin[ip[j]];
-	printf("Message after initial permutation\n");
-	for(j=0;j<64;j++)
-	{
-		if(j&&!(j%8))
-			printf(" ");
-		printf("%d",t_bin[j]);
-	}
-	for(j=0;j<16;j++)
-	{
-		printf("\nRound %d\n",j);
-		printf("Input message\n");
-		for(l=0;l<64;l++)
-		{
-			if(l&&!(l%32))
-				printf(" ");
-			printf("%d",t_bin[l]);
-		}
-		bool mr[32];
-		//seperate right part
-		for(l=32;l<64;l++)
-			mr[l-32]=t_bin[l];
-		printf("\nRight part\n");
-		for(l=0;l<32;l++)
-		{
-			if(l&&!(l%4))
-				printf(" ");
-			printf("%d",mr[l]);
-		}
-		//expand right part
-		bool mre[48];
-		for(l=0;l<48;l++)
-			mre[l]=mr[e[l]];
-		printf("\nExpanded right\n");
-		for(l=0;l<48;l++)
-		{
-			if(l&&!(l%6))
-				printf(" ");
-			printf("%d",mre[l]);
-		}
-		printf("\nKey\n");
-		for(l=0;l<48;l++)
-		{
-			if(l&&!(l%6))
-				printf(" ");
-			printf("%d",k[j][l]);
-		}
-		//perform xor operation
-		for(l=0;l<48;l++)
-			mre[l]=xor(mre[l],k[j][l]);
-		printf("\nAfter xor operation\n");
-		for(l=0;l<48;l++)
-		{
-			if(l&&!(l%6))
-				printf(" ");
-			printf("%d",mre[l]);
-		}
-		bool f[32];
-		for(l=0;l<8;l++)
-		{
-			int a;
-			bool sip[6];
-			for(a=l*6;a<(l+1)*6;a++)
-				sip[a-l*6]=mre[a];
-			int x=sip[0]*2+sip[5];
-			int y=0;
-			for(a=1;a<5;a++)
-				y=y*2+sip[a];
-			int z=s[l][x][y];
-			for(a=l*4;a<(l+1)*4;a++)
-				f[a]=0;
-			a=(l+1)*4-1;
-			while(z)
-			{
-				f[a]=z%2;
-				z=z/2;
-				a--;
-			}
-		}
-		printf("\nOutput of sbox\n");
-		for(l=0;l<32;l++)
-		{
-			if(l&&!(l%4))
-				printf(" ");
-			printf("%d",f[l]);
-		}
-		bool f_permuted[32];
-		for(l=0;l<32;l++)
-			f_permuted[l]=f[p[l]];
-		printf("\nPermuted output of sbox\n");
-		for(l=0;l<32;l++)
-		{
-			if(l&&!(l%4))
-				printf(" ");
-			printf("%d",f_permuted[l]);
-		}
-		for(l=0;l<32;l++)
-			t_bin[l+32]=xor(t_bin[l],f_permuted[l]);
-		for(l=0;l<32;l++)
-			t_bin[l]=mr[l];
-		printf("\nOutput message\n");
-		for(l=0;l<64;l++)
-		{
-			if(l&&!(l%4))
-				printf(" ");
-			printf("%d",t_bin[l]);
-		}
-		
-	}
-	//exchange left and right
-	bool temp;
-	for(j=0;j<32;j++)
-	{
-		temp=t_bin[j];
-		t_bin[j]=t_bin[j+32];
-		t_bin[j+32]=temp;
-	}
-	//perform reverse ip
-	for(j=0;j<64;j++)
-		message_bin[ip[j]]=t_bin[j];
-	printf("\nFinal encrypted message\n");
-	for(j=0;j<64;j++)
-	{
-		if(j&&!(j%4))
-			printf(" ");
-		printf("%d",message_bin[j]);
 	}
 	
+	ptr=fopen(argv[3],"w");
+	for(i=0;i<len/64;i++)
+	{
+		bool block[64];
+		for(j=i*64;j<(i+1)*64;j++)
+		{
+			block[j-i*64]=message_bin[j];
+		}
+		//perform initial permutation
+		printf("block in binary\n");
+		for(j=0;j<64;j++)
+			printf("%d",block[j]);
+		printf("\n");
+		bool t_bin[64];
+		for(j=0;j<64;j++)
+			t_bin[j]=block[ip[j]];
+		printf("Message after initial permutation\n");
+		for(j=0;j<64;j++)
+		{
+			if(j&&!(j%8))
+				printf(" ");
+			printf("%d",t_bin[j]);
+		}
+		for(j=0;j<16;j++)
+		{
+			printf("\nRound %d\n",j);
+			printf("Input message\n");
+			for(l=0;l<64;l++)
+			{
+				if(l&&!(l%32))
+					printf(" ");
+				printf("%d",t_bin[l]);
+			}
+			bool mr[32];
+			//seperate right part
+			for(l=32;l<64;l++)
+				mr[l-32]=t_bin[l];
+			printf("\nRight part\n");
+			for(l=0;l<32;l++)
+			{
+				if(l&&!(l%4))
+					printf(" ");
+				printf("%d",mr[l]);
+			}
+			//expand right part
+			bool mre[48];
+			for(l=0;l<48;l++)
+				mre[l]=mr[e[l]];
+			printf("\nExpanded right\n");
+			for(l=0;l<48;l++)
+			{
+				if(l&&!(l%6))
+					printf(" ");
+				printf("%d",mre[l]);
+			}
+			printf("\nKey\n");
+			for(l=0;l<48;l++)
+			{
+				if(l&&!(l%6))
+					printf(" ");
+				printf("%d",k[j][l]);
+			}
+			//perform xor operation
+			for(l=0;l<48;l++)
+				mre[l]=xor(mre[l],k[j][l]);
+			printf("\nAfter xor operation\n");
+			for(l=0;l<48;l++)
+			{
+				if(l&&!(l%6))
+					printf(" ");
+				printf("%d",mre[l]);
+			}
+			bool f[32];
+			for(l=0;l<8;l++)
+			{
+				int a;
+				bool sip[6];
+				for(a=l*6;a<(l+1)*6;a++)
+					sip[a-l*6]=mre[a];
+				int x=sip[0]*2+sip[5];
+				int y=0;
+				for(a=1;a<5;a++)
+					y=y*2+sip[a];
+				int z=s[l][x][y];
+				for(a=l*4;a<(l+1)*4;a++)
+					f[a]=0;
+				a=(l+1)*4-1;
+				while(z)
+				{
+					f[a]=z%2;
+					z=z/2;
+					a--;
+				}
+			}
+			printf("\nOutput of sbox\n");
+			for(l=0;l<32;l++)
+			{
+				if(l&&!(l%4))
+					printf(" ");
+				printf("%d",f[l]);
+			}
+			bool f_permuted[32];
+			for(l=0;l<32;l++)
+				f_permuted[l]=f[p[l]];
+			printf("\nPermuted output of sbox\n");
+			for(l=0;l<32;l++)
+			{
+				if(l&&!(l%4))
+					printf(" ");
+				printf("%d",f_permuted[l]);
+			}
+			for(l=0;l<32;l++)
+				t_bin[l+32]=xor(t_bin[l],f_permuted[l]);
+			for(l=0;l<32;l++)
+				t_bin[l]=mr[l];
+			printf("\nOutput message\n");
+			for(l=0;l<64;l++)
+			{
+				if(l&&!(l%4))
+					printf(" ");
+				printf("%d",t_bin[l]);
+			}
+			
+		}
+		//exchange left and right
+		bool temp;
+		for(j=0;j<32;j++)
+		{
+			temp=t_bin[j];
+			t_bin[j]=t_bin[j+32];
+			t_bin[j+32]=temp;
+		}
+		//perform reverse ip
+		for(j=0;j<64;j++)
+			block[ip[j]]=t_bin[j];
+		printf("\nFinal encrypted message\n");
+		for(j=0;j<64;j++)
+		{
+			if(j&&!(j%4))
+				printf(" ");
+			printf("%d",block[j]);
+			fprintf(ptr,"%d",block[j]);
+		}
+		
+	}	
 			
 		
 		
-	//fclose(ptr);
+	fclose(ptr);
 	printf("\n");
 	return 0;
 }
